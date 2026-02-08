@@ -23,7 +23,6 @@ $AtTime     = '09:00AM'                                      # trigger time
 $StartFrom  = 1                                              # first integer if no log exists yet
 
 # Power config toggles (you can change these)
-$DisableDisplayTimeout = $true    # set to $false if you want screen to still turn off
 $DisableHibernate      = $true    # set to $false if you want to keep hibernation timeouts
 
 # Base user Programs directory: C:\Users\{username}\AppData\Local\Programs
@@ -74,11 +73,6 @@ function Set-NeverSleep {
         # --- Sleep timeouts (0 = Never) ---
         powercfg /x -standby-timeout-ac 0 | Out-Null
         powercfg /x -disk-timeout-ac 0 | Out-Null
-
-        # --- Optional: Display timeouts (0 = Never) ---
-        if ($DisableDisplayTimeout) {
-            powercfg /x -monitor-timeout-ac 0 | Out-Null
-        }
 
         # --- Optional: Hibernate timeouts (0 = Never) ---
         if ($DisableHibernate) {
