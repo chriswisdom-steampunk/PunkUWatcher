@@ -2,6 +2,24 @@
 
 This is a quick script to launch a punkU video in the browser in an automated fashion. Just leave your laptop on and it will watch punkU for you.
 
+## Setup 
+
+The script will try to set your laptop to not sleep while its plugged in. If this failes to be set do it manually in power plan settings
+run 
+``` 
+powercfg.cpl
+```
+Select `change plan settings` > `change advanced power settings`
+Set
+
+Hard Disk
+- Turn off hard disk after
+    - Plugged In : `Never`
+
+Sleep
+- Sleep After
+    - Plugged In: `Never`
+
 ## Installation
 
 Install by running this script to copy the watcher to the right folder and it will self schedule for 9 AM local time evey Monday, Wednesday, and Friday

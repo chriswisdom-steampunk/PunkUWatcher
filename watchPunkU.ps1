@@ -22,6 +22,10 @@ $Days       = @('Monday','Wednesday','Friday')               # trigger days
 $AtTime     = '09:00AM'                                      # trigger time
 $StartFrom  = 1                                              # first integer if no log exists yet
 
+# Power config toggles (you can change these)
+$DisableDisplayTimeout = $true    # set to $false if you want screen to still turn off
+$DisableHibernate      = $true    # set to $false if you want to keep hibernation timeouts
+
 # Base user Programs directory: C:\Users\{username}\AppData\Local\Programs
 $BasePrograms = Join-Path $env:LOCALAPPDATA 'Programs'
 
@@ -47,6 +51,66 @@ foreach ($dir in @($AppDir, $LogDir)) {
     }
 }
 
+# ============================
+# Power: Never Sleep
+# ============================
+
+function Set-NeverSleep {
+    param(
+        [bool]$DisableDisplayTimeout = $true,
+        [bool]$DisableHibernate      = $true,
+        [string]$LogPath
+    )
+
+    try {
+        # Ensure we are operating on the active scheme
+        $activeSchemeLine = powercfg /getactivescheme 2>$null
+        if ($LASTEXITCODE -ne 0 -or -not $activeSchemeLine) {
+            throw "Unable to determine active power scheme."
+        }
+        # Example line: "Power Scheme GUID: 381b4222-f694-41f0-9685-ff5bb260df2e  (Balanced)"
+        $schemeGuid = ($activeSchemeLine -replace '.*GUID:\s*([0-9a-fA-F-]+).*','$1')
+
+        # --- Sleep timeouts (0 = Never) ---
+        powercfg /x -standby-timeout-ac 0 | Out-Null
+        powercfg /x -disk-timeout-ac 0 | Out-Null
+
+        # --- Optional: Display timeouts (0 = Never) ---
+        if ($DisableDisplayTimeout) {
+            powercfg /x -monitor-timeout-ac 0 | Out-Null
+        }
+
+        # --- Optional: Hibernate timeouts (0 = Never) ---
+        if ($DisableHibernate) {
+            powercfg /x -hibernate-timeout-ac 0 | Out-Null
+        }
+
+        # Confirm results (best-effort)
+        $summary = @()
+        $q = powercfg /query $schemeGuid 2>$null
+        if ($q) {
+            $summary += "Active scheme: $schemeGuid"
+            if ($DisableDisplayTimeout) { $summary += "Display timeout: Never (AC/DC)" }
+            $summary += "Sleep timeout: Never (AC/DC)"
+            if ($DisableHibernate)     { $summary += "Hibernate timeout: Never (AC/DC)" }
+        } else {
+            $summary += "Applied 'Never' timeouts (AC/DC) for sleep" +
+                        ($(if ($DisableDisplayTimeout) {", display"} else {""})) +
+                        ($(if ($DisableHibernate) {", hibernate"} else {""})) + "."
+        }
+
+        $msg = "$ts | Power settings changed: " + ($summary -join '; ')
+        if ($LogPath) { Add-Content -Path $LogPath -Value $msg }
+        Write-Host $msg
+
+    } catch {
+        $err = "$ts | Failed to change power settings: $($_.Exception.Message)"
+        if ($LogPath) { Add-Content -Path $LogPath -Value $err }
+        Write-Warning $err
+    }
+}
+
+
 # ----------------------------
 # One-time: Create scheduled task if not already present
 # ----------------------------
@@ -64,6 +128,9 @@ try {
                                -Principal $principal `
                                -Description 'Launches Punku Steampunk next asset (M/W/F at 9:00 AM). Action: run this script.' | Out-Null
         Write-Host "Scheduled Task '$TaskName' created (M/W/F @ $AtTime)."
+    
+        # Apply "Never Sleep" settings now
+        Set-NeverSleep -DisableDisplayTimeout:$DisableDisplayTimeout -DisableHibernate:$DisableHibernate -LogPath $LogFile
     } else {
         # Do NOT modify if it already exists
         # Write-Host "Scheduled Task '$TaskName' already exists; not modifying."
