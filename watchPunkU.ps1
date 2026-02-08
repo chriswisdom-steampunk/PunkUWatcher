@@ -56,7 +56,6 @@ foreach ($dir in @($AppDir, $LogDir)) {
 
 function Set-NeverSleep {
     param(
-        [bool]$DisableDisplayTimeout = $true,
         [bool]$DisableHibernate      = $true,
         [string]$LogPath
     )
@@ -84,12 +83,10 @@ function Set-NeverSleep {
         $q = powercfg /query $schemeGuid 2>$null
         if ($q) {
             $summary += "Active scheme: $schemeGuid"
-            if ($DisableDisplayTimeout) { $summary += "Display timeout: Never (AC/DC)" }
             $summary += "Sleep timeout: Never (AC/DC)"
             if ($DisableHibernate)     { $summary += "Hibernate timeout: Never (AC/DC)" }
         } else {
             $summary += "Applied 'Never' timeouts (AC/DC) for sleep" +
-                        ($(if ($DisableDisplayTimeout) {", display"} else {""})) +
                         ($(if ($DisableHibernate) {", hibernate"} else {""})) + "."
         }
 
@@ -124,7 +121,7 @@ try {
         Write-Host "Scheduled Task '$TaskName' created (M/W/F @ $AtTime)."
     
         # Apply "Never Sleep" settings now
-        Set-NeverSleep -DisableDisplayTimeout:$DisableDisplayTimeout -DisableHibernate:$DisableHibernate -LogPath $LogFile
+        Set-NeverSleep -DisableHibernate:$DisableHibernate -LogPath $LogFile
     } else {
         # Do NOT modify if it already exists
         # Write-Host "Scheduled Task '$TaskName' already exists; not modifying."
